@@ -92,7 +92,7 @@ foreach my $channel (@{$conf->{channel}})
      # time=200806100000		Time and date in YYYYMMDDhhmm format
      # dur=720 			Length of data to fetch in minutes (2880 max - 2 days)
      # detail=2			2 gives full epg data with descriptions, any other number gives no desc.
-     my $time = DateTime->now()->strftime("%Y%m%d%H%M%S");
+     my $time = DateTime->now()->strftime("%Y%m%d%H0000");
      my $dur = 2880;
      my $detail = 2;
      my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$time";
