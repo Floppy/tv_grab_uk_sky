@@ -87,12 +87,12 @@ my $data = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmlt
 foreach my $channel (@{$conf->{channel}})
 {
      # Fetch http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json
-     # Parameters: (GET) 
+     # Parameters: (GET)
      # channels=6000,1235		Commer seperated list of channel ids (limit of 20 to this list)
      # time=200806100000		Time and date in YYYYMMDDhhmm format
      # dur=720 			Length of data to fetch in minutes (2880 max - 2 days)
      # detail=2			2 gives full epg data with descriptions, any other number gives no desc.
-     my $time = DateTime->now()->strftime("%Y%m%d%H0000");
+     my $time = DateTime->now(time_zone => 'Europe/London')->strftime("%Y%m%d%H0000");
      my $dur = 2880;
      my $detail = 2;
      my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$time";
@@ -110,7 +110,7 @@ foreach my $channel (@{$conf->{channel}})
        {
          my $start = $prog->{start};
          $start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
-         $start = DateTime->from_epoch(epoch => $start);
+         $start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
          my $end = $start->clone();
          $end->add(seconds => $prog->{dur});
          $start = $start->strftime("%Y%m%d%H%M%S");
@@ -135,7 +135,7 @@ foreach my $channel (@{$conf->{channel}})
 
 }
 $data .= '</tv>';
-print $data;
+#print $data;
 exit 0;
 
 sub config_stage
