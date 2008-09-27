@@ -135,7 +135,7 @@ foreach my $channel (@{$conf->{channel}})
 
 }
 $data .= '</tv>';
-#print $data;
+print $data;
 exit 0;
 
 sub config_stage
