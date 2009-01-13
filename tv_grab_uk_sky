@@ -73,61 +73,73 @@ use HTML::Entities;
 use DateTime;
 
 my( $opt, $conf ) = ParseOptions( { 
-     grabber_name => "tv_grab_uk_sky",
-     capabilities => [qw/baseline manualconfig apiconfig/],
-     stage_sub => \&config_stage,
-     listchannels_sub => \&list_channels,
-     version => '$Id: tv_grab_uk_sky.in,v 0.1 2008/09/27 Exp $',
-     description => "",
+  grabber_name => "tv_grab_uk_sky",
+  capabilities => [qw/baseline manualconfig apiconfig/],
+  stage_sub => \&config_stage,
+  listchannels_sub => \&list_channels,
+  version => '$Id: tv_grab_uk_sky.in,v 0.1 2008/09/27 Exp $',
+  description => "",
 } );
 
-# Get the actual data and print it to stdout.
-my $data = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmltv.dtd"><tv>';
-
+# For each channel
+my @channels;
 foreach my $channel (@{$conf->{channel}})
 {
-     # Fetch http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json
-     # Parameters: (GET)
-     # channels=6000,1235		Commer seperated list of channel ids (limit of 20 to this list)
-     # time=200806100000		Time and date in YYYYMMDDhhmm format
-     # dur=720 			Length of data to fetch in minutes (2880 max - 2 days)
-     # detail=2			2 gives full epg data with descriptions, any other number gives no desc.
-     my $time = DateTime->now(time_zone => 'Europe/London')->strftime("%Y%m%d%H0000");
-     my $dur = 2880;
-     my $detail = 2;
-     my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$time";
-     my $res = get($url);
-     my $channel_data = decode_json $res;
-
-     foreach my $ch ($channel_data->{channels})
-     {
-       # Create channel node in XMLTV file
-       my $channelid = $ch->{channelid};
-       my $channeltitle = $ch->{title};
-       encode_entities($channeltitle);  
-       $data .= "<channel id='$channelid.sky.com'><display-name>$channeltitle</display-name></channel>";
-       foreach my $prog (@{$ch->{program}})
-       {
-         my $start = $prog->{start};
-         $start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
-         $start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
-         my $end = $start->clone();
-         $end->add(seconds => $prog->{dur});
-         $start = $start->strftime("%Y%m%d%H%M%S %z");
-         $end = $end->strftime("%Y%m%d%H%M%S %z");
-         $data .= "<programme start='$start' stop='$end' channel='$channelid.sky.com'>";
-         my $prog_title = $prog->{title};
-         encode_entities($prog_title);
-         $data .= "<title lang='en'>$prog_title</title>";
-         my $prog_desc = $prog->{shortDesc};
-         encode_entities($prog_desc);
-         $data .= "<desc lang='en'>$prog_desc</desc>";
-         $data .= "</programme>";
-       }     
-     }
-
+	# Grab data from Sky
+	# Fetch http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json
+	# Parameters: (GET)
+	# channels=6000,1235		Commer seperated list of channel ids (limit of 20 to this list)
+	# time=200806100000		Time and date in YYYYMMDDhhmm format
+	# dur=720 			Length of data to fetch in minutes (2880 max - 2 days)
+	# detail=2			2 gives full epg data with descriptions, any other number gives no desc.
+	my $time = DateTime->now(time_zone => 'Europe/London')->strftime("%Y%m%d%H0000");
+	my $dur = 2880;
+	my $detail = 2;
+	my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$time";
+	my $res = get($url);
+	my $channel_data = decode_json $res;
+	# Store channel information
+  push(@channels, $channel_data->{channels});
 }
+
+# Start XMLTV file
+my $data = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmltv.dtd"><tv>';
+# For each stored channel
+foreach my $ch (@channels)
+{
+	# Write channel tag
+	my $channelid = $ch->{channelid};
+	my $channeltitle = $ch->{title};
+	encode_entities($channeltitle);  
+	$data .= "<channel id='$channelid.sky.com'><display-name>$channeltitle</display-name></channel>";
+}
+# For each stored channel
+foreach my $ch (@channels)
+{
+	my $channelid = $ch->{channelid};
+	# Write all programme tags
+	foreach my $prog (@{$ch->{program}})
+	{
+		my $start = $prog->{start};
+		$start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
+		$start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
+		my $end = $start->clone();
+		$end->add(seconds => $prog->{dur});
+		$start = $start->strftime("%Y%m%d%H%M%S %z");
+		$end = $end->strftime("%Y%m%d%H%M%S %z");
+		$data .= "<programme start='$start' stop='$end' channel='$channelid.sky.com'>";
+		my $prog_title = $prog->{title};
+		encode_entities($prog_title);
+		$data .= "<title lang='en'>$prog_title</title>";
+		my $prog_desc = $prog->{shortDesc};
+		encode_entities($prog_desc);
+		$data .= "<desc lang='en'>$prog_desc</desc>";
+		$data .= "</programme>";
+	}
+}
+# Finish XMLTV file
 $data .= '</tv>';
+# Write file to stdout
 print $data;
 exit 0;
 
