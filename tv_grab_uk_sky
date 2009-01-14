@@ -81,33 +81,52 @@ my( $opt, $conf ) = ParseOptions( {
   description => "",
 } );
 
+# How many days are we going to grab data for?
+my $days = $opt->{days};
+my $offset = $opt->{offset};
+my $last_day = $offset + $days;
+if ($last_day > 6) { $last_day = 6 }
+
 # For each channel
-my @channels;
+my %channels = ();
+my %programmes = ();
 foreach my $channel (@{$conf->{channel}})
 {
-	# Grab data from Sky
-	# Fetch http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json
-	# Parameters: (GET)
-	# channels=6000,1235		Commer seperated list of channel ids (limit of 20 to this list)
-	# time=200806100000		Time and date in YYYYMMDDhhmm format
-	# dur=720 			Length of data to fetch in minutes (2880 max - 2 days)
-	# detail=2			2 gives full epg data with descriptions, any other number gives no desc.
-	my $time = DateTime->now(time_zone => 'Europe/London');
-  $time = $time->add( days => $opt->{offset} );
-  $time = $time->strftime("%Y%m%d%H%M");
-	my $dur = 2880;
-	my $detail = 2;
-	my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$time";
-	my $res = get($url);
-	my $channel_data = decode_json $res;
-	# Store channel information
-  push(@channels, $channel_data->{channels});
+  for (my $grab_offset = $offset; $grab_offset < $last_day; $grab_offset += 2)
+  {
+	  # channels=6000,1235		Comma seperated list of up to 20 channel ids
+	  my $time = DateTime->now(time_zone => 'Europe/London');
+    $time = $time->add( days => $grab_offset );
+    my $timestr = $time->strftime("%Y%m%d0000");          # Time and date in YYYYMMDDhhmm format
+	  my $dur = $last_day - $grab_offset < 2 ? 1440 : 2880; # Length of data to fetch in minutes (2880 max - 2 days)
+	  my $detail = 2;                                       # 2 gives full epg data with descriptions, any other number gives no desc.
+	  my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$timestr";
+	  my $res = get($url);
+	  my $channel_data = decode_json $res;
+	  # Store channel information
+    foreach my $x ($channel_data->{channels})
+    {
+      my $channelid = $x->{channelid};
+      my @program = @{$x->{program}};
+      if (exists $channels{$channelid})
+      {
+        # Add programs from this grab to the list that already exists in the channel info we got before
+        push @{$programmes{$channelid}}, @program;
+      } 
+      else
+      {       
+        # Store channel info
+        $channels{$channelid} = $x;
+        $programmes{$channelid} = [ @program ];
+      }
+    }
+  }
 }
 
 # Start XMLTV file
 my $data = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmltv.dtd"><tv>';
 # For each stored channel
-foreach my $ch (@channels)
+foreach my $ch (values(%channels))
 {
 	# Write channel tag
 	my $channelid = $ch->{channelid};
@@ -116,11 +135,11 @@ foreach my $ch (@channels)
 	$data .= "<channel id='$channelid.sky.com'><display-name>$channeltitle</display-name></channel>";
 }
 # For each stored channel
-foreach my $ch (@channels)
+foreach my $ch (values(%channels))
 {
 	my $channelid = $ch->{channelid};
 	# Write all programme tags
-	foreach my $prog (@{$ch->{program}})
+	foreach my $prog (@{$programmes{$channelid}})
 	{
 		my $start = $prog->{start};
 		$start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
