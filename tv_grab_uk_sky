@@ -87,9 +87,11 @@ my $offset = $opt->{offset};
 my $last_day = $offset + $days;
 if ($last_day > 6) { $last_day = 6 }
 
-# For each channel
+# Channel and programme storage hashes
 my %channels = ();
 my %programmes = ();
+
+# For each channel
 foreach my $channel (@{$conf->{channel}})
 {
   for (my $grab_offset = $offset; $grab_offset < $last_day; $grab_offset += 2)
@@ -124,7 +126,7 @@ foreach my $channel (@{$conf->{channel}})
 }
 
 # Start XMLTV file
-my $data = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmltv.dtd"><tv>';
+my $data = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n<tv>\n";
 # For each stored channel
 foreach my $ch (values(%channels))
 {
@@ -132,7 +134,7 @@ foreach my $ch (values(%channels))
 	my $channelid = $ch->{channelid};
 	my $channeltitle = $ch->{title};
 	encode_entities($channeltitle);  
-	$data .= "<channel id='$channelid.sky.com'><display-name>$channeltitle</display-name></channel>";
+	$data .= "  <channel id='$channelid.sky.com'>\n    <display-name>$channeltitle</display-name>\n  </channel>\n";
 }
 # For each stored channel
 foreach my $ch (values(%channels))
@@ -148,14 +150,14 @@ foreach my $ch (values(%channels))
 		$end->add(seconds => $prog->{dur});
 		$start = $start->strftime("%Y%m%d%H%M%S %z");
 		$end = $end->strftime("%Y%m%d%H%M%S %z");
-		$data .= "<programme start='$start' stop='$end' channel='$channelid.sky.com'>";
+		$data .= "  <programme start='$start' stop='$end' channel='$channelid.sky.com'>\n";
 		my $prog_title = $prog->{title};
 		encode_entities($prog_title);
-		$data .= "<title lang='en'>$prog_title</title>";
+		$data .= "    <title lang='en'>$prog_title</title>\n";
 		my $prog_desc = $prog->{shortDesc};
 		encode_entities($prog_desc);
-		$data .= "<desc lang='en'>$prog_desc</desc>";
-		$data .= "</programme>";
+		$data .= "    <desc lang='en'>$prog_desc</desc>\n";
+		$data .= "  </programme>\n";
 	}
 }
 # Finish XMLTV file
