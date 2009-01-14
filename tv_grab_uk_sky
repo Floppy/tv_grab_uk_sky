@@ -99,7 +99,7 @@ foreach my $channel (@{$conf->{channel}})
 	  # channels=6000,1235		Comma seperated list of up to 20 channel ids
 	  my $time = DateTime->now(time_zone => 'Europe/London');
     $time = $time->add( days => $grab_offset );
-    my $timestr = $time->strftime("%Y%m%d0000");          # Time and date in YYYYMMDDhhmm format
+    my $timestr = $time->strftime("%Y%m%d%H%M");          # Time and date in YYYYMMDDhhmm format
 	  my $dur = $last_day - $grab_offset < 2 ? 1440 : 2880; # Length of data to fetch in minutes (2880 max - 2 days)
 	  my $detail = 2;                                       # 2 gives full epg data with descriptions, any other number gives no desc.
 	  my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$timestr";
@@ -110,6 +110,14 @@ foreach my $channel (@{$conf->{channel}})
     {
       my $channelid = $x->{channelid};
       my @program = @{$x->{program}};
+      # Filter out any programmes that started the day before this grab was for, so that we avoid duplication
+      @program = grep {
+	      my $start = $_->{start};
+	      $start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
+	      $start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
+        $start > $time;
+      } @program;
+      # Store data
       if (exists $channels{$channelid})
       {
         # Add programs from this grab to the list that already exists in the channel info we got before
