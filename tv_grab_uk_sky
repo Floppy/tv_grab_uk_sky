@@ -18,7 +18,9 @@ tv_grab_uk_sky [--config-file FILE] [--output FILE] [--quiet]
 =head1 DESCRIPTION
 
 Output TV and radio listings in XMLTV format for many stations
-available the UK. The data comes from the sky.com JSON web service.
+available the UK. The data comes from the sky.com JSON web service,
+which was documented by mrmt32 at 
+http://www.digitalspy.co.uk/forums/showthread.php?p=24814269
 
 =head1 USAGE
 
