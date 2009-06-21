@@ -79,7 +79,7 @@ my( $opt, $conf ) = ParseOptions( {
   capabilities => [qw/baseline manualconfig apiconfig/],
   stage_sub => \&config_stage,
   listchannels_sub => \&list_channels,
-  version => '$Id: tv_grab_uk_sky.in,v 1.0 2008/01/14 Exp $',
+  version => '$Id: tv_grab_uk_sky.in,v 1.1 2009/06/21 Exp $',
   description => "",
 } );
 
