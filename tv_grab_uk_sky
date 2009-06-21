@@ -106,30 +106,34 @@ foreach my $channel (@{$conf->{channel}})
 	  my $detail = 2;                                       # 2 gives full epg data with descriptions, any other number gives no desc.
 	  my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$timestr";
 	  my $res = get($url);
-	  my $channel_data = decode_json $res;
-	  # Store channel information
-    foreach my $x ($channel_data->{channels})
-    {
-      my $channelid = $x->{channelid};
-      my @program = @{$x->{program}};
-      # Filter out any programmes that started the day before this grab was for, so that we avoid duplication
-      @program = grep {
-	      my $start = $_->{start};
-	      $start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
-	      $start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
-        $start > $time;
-      } @program;
-      # Store data
-      if (exists $channels{$channelid})
+	  $res =~ s/""$//g;
+	  if (length($res) > 0)
+	  {
+	    my $channel_data = decode_json $res;
+	    # Store channel information
+      foreach my $x ($channel_data->{channels})
       {
-        # Add programs from this grab to the list that already exists in the channel info we got before
-        push @{$programmes{$channelid}}, @program;
-      } 
-      else
-      {       
-        # Store channel info
-        $channels{$channelid} = $x;
-        $programmes{$channelid} = [ @program ];
+        my $channelid = $x->{channelid};
+        my @program = @{$x->{program}};
+        # Filter out any programmes that started the day before this grab was for, so that we avoid duplication
+        @program = grep {
+	        my $start = $_->{start};
+	        $start = substr($start,0,length($start)-3);  # Need to chop trailing 000 off the end
+	        $start = DateTime->from_epoch(epoch => $start, time_zone => 'Europe/London');
+          $start > $time;
+        } @program;
+        # Store data
+        if (exists $channels{$channelid})
+        {
+          # Add programs from this grab to the list that already exists in the channel info we got before
+          push @{$programmes{$channelid}}, @program;
+        } 
+        else
+        {       
+          # Store channel info
+          $channels{$channelid} = $x;
+          $programmes{$channelid} = [ @program ];
+        }
       }
     }
   }
