@@ -73,6 +73,7 @@ use LWP::Simple qw/get/;
 use JSON;
 use HTML::Entities;
 use DateTime;
+use Encode;
 
 my( $opt, $conf ) = ParseOptions( { 
   grabber_name => "tv_grab_uk_sky",
@@ -104,12 +105,12 @@ foreach my $channel (@{$conf->{channel}})
     my $timestr = $time->strftime("%Y%m%d%H%M");          # Time and date in YYYYMMDDhhmm format
 	  my $dur = $last_day - $grab_offset < 2 ? 1440 : 2880; # Length of data to fetch in minutes (2880 max - 2 days)
 	  my $detail = 2;                                       # 2 gives full epg data with descriptions, any other number gives no desc.
-	  my $url = "http://www.sky.com/portletepg/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$timestr";
+      my $url = "http://epgservices.sky.com/tvlistings-proxy/TVListingsProxy/tvlistings.json?channels=$channel&dur=$dur&detail=$detail&time=$timestr";
 	  my $res = get($url);
 	  $res =~ s/""$//g;
 	  if (length($res) > 0)
 	  {
-	    my $channel_data = decode_json $res;
+	    my $channel_data = JSON::XS->new->decode (decode "UTF-8", $res);
 	    # Store channel information
       foreach my $x ($channel_data->{channels})
       {
@@ -200,9 +201,9 @@ sub list_channels
      my( $conf, $opt ) = @_;
      my $channel_list = '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE tv SYSTEM "xmltv.dtd"><tv>';
 
-     # Load http://www.sky.com/portletepg/TVListingsProxy/init.json and convert to XML channel list
-     my $res = get( "http://www.sky.com/portletepg/TVListingsProxy/init.json" );
-     my $channel_data = decode_json $res;
+     # Load http://epgservices.sky.com/tvlistings-proxy/TVListingsProxy/init.json and convert to XML channel list
+     my $res = get( "http://epgservices.sky.com/tvlistings-proxy/TVListingsProxy/init.json" );
+     my $channel_data = JSON::XS->new->decode (decode "UTF-8", $res);
 
      foreach my $channel (@{$channel_data->{channels}})
      {
